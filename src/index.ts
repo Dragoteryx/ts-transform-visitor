@@ -12,6 +12,8 @@ export interface Visitor<T extends Type> {
   readonly program: T extends "program" ? ts.Program : undefined;
   readonly typeChecker: T extends "program" | "checker" ? ts.TypeChecker : undefined;
   readonly config: T extends Exclude<Type, "raw"> ? Record<string, any> : undefined;
+
+  [key: string]: any;
 }
 
 /**
@@ -61,7 +63,8 @@ export default function transform<T extends Type>(type: T, visit: (this: Visitor
           const visitorObj = {
             context, sourceFile,
             factory: context.factory,
-            compilerOptions: context.getCompilerOptions()
+            compilerOptions: context.getCompilerOptions(),
+            data: {}
           };
           const visitor: ts.Visitor = node => {
             const res = visit.call(visitorObj as any, node);

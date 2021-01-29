@@ -1,6 +1,6 @@
 {
   "name": "ts-transform-visitor",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "A TypeScript utility function to easily create transformers using the visitor pattern.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

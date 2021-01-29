@@ -3,18 +3,31 @@ import ts from "typescript";
 export type Type = "program" | "checker" | "compilerOptions" | "config" | "raw";
 export type Result = ts.Node | ts.Node[] | null | void;
 
-export interface Visitor<T extends Type> {
+export interface RawVisitor {
   readonly sourceFile: ts.SourceFile;
   readonly context: ts.TransformationContext;
   readonly factory: ts.NodeFactory;
   readonly compilerOptions: ts.CompilerOptions;
-
-  readonly program: T extends "program" ? ts.Program : undefined;
-  readonly typeChecker: T extends "program" | "checker" ? ts.TypeChecker : undefined;
-  readonly config: T extends Exclude<Type, "raw"> ? Record<string, any> : undefined;
-
-  [key: string]: any;
+  blackboard: Record<string, any>;
 }
+export interface ConfigVisitor extends RawVisitor {
+  readonly config: Record<string, any>;
+}
+export interface TypeCheckerVisitor extends ConfigVisitor {
+  readonly typeChecker: ts.TypeChecker;
+}
+export interface ProgramVisitor extends TypeCheckerVisitor {
+  readonly program: ts.Program;
+}
+
+export type Visitor<T extends Type> =
+  T extends "program" ?
+    ProgramVisitor :
+    T extends "checker" ?
+      TypeCheckerVisitor :
+      T extends "raw" ?
+        RawVisitor :
+        ConfigVisitor;
 
 /**
  * Utility function to create a TypeScript transformer using the visitor pattern.
@@ -46,7 +59,7 @@ export default function transform<T extends Type>(type: T, visit: (this: Visitor
           return visit.call(this as any, node);
         });
       case "compilerOptions":
-        return transform("raw" as any, function(node) {
+        return transform("raw", function(node) {
           // @ts-expect-error
           this.config ??= args[1];
           return visit.call(this as any, node);
@@ -63,8 +76,7 @@ export default function transform<T extends Type>(type: T, visit: (this: Visitor
           const visitorObj = {
             context, sourceFile,
             factory: context.factory,
-            compilerOptions: context.getCompilerOptions(),
-            data: {}
+            compilerOptions: context.getCompilerOptions()
           };
           const visitor: ts.Visitor = node => {
             const res = visit.call(visitorObj as any, node);
